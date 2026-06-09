@@ -8,6 +8,7 @@ import net.minecraft.client.util.InputUtil;
 import net.minecraft.entity.decoration.EndCrystalEntity;
 import net.minecraft.item.Items;
 import net.minecraft.text.Text;
+import net.minecraft.util.Identifier;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.BlockPos;
@@ -23,6 +24,9 @@ public class CrystalMacro implements ClientModInitializer {
     private static final int COOLDOWN_T = 2;
     private static final int PLACEMENT_WINDOW_TICKS = 12;
     private static final double MATCH_RADIUS = 0.7;
+
+    private static final KeyBinding.Category CATEGORY =
+            KeyBinding.Category.register(Identifier.of("crystalmacro", "main"));
 
     private static boolean enabled = false;
     private static int cooldown = 0;
@@ -42,7 +46,7 @@ public class CrystalMacro implements ClientModInitializer {
                 "key.crystalmacro.toggle",
                 InputUtil.Type.KEYSYM,
                 GLFW.GLFW_KEY_R,
-                "category.crystalmacro"
+                CATEGORY
         ));
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
@@ -88,7 +92,7 @@ public class CrystalMacro implements ClientModInitializer {
                 present.add(id);
                 if (seenCrystals.contains(id)) continue;
 
-                Vec3d cp = c.getPos();
+                Vec3d cp = new Vec3d(c.getX(), c.getY(), c.getZ());
                 Iterator<PendingPlace> it = pending.iterator();
                 while (it.hasNext()) {
                     PendingPlace p = it.next();
