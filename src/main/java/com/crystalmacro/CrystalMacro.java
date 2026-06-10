@@ -26,7 +26,7 @@ public class CrystalMacro implements ClientModInitializer {
     private static final double MATCH_RADIUS = 0.7;
 
     private static final KeyBinding.Category CATEGORY =
-            KeyBinding.Category.register(Identifier.of("crystalmacro", "main"));
+            KeyBinding.Category.create(Identifier.of("crystalmacro", "main"));
 
     private static boolean enabled = false;
     private static int cooldown = 0;
