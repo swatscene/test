@@ -10,6 +10,9 @@ import net.minecraft.text.Text;
 
 public class ConfigScreen extends Screen {
 
+    private ButtonWidget reachLabel;
+    private ButtonWidget hitsLabel;
+
     public ConfigScreen() {
         super(Text.literal("Crystal Macro Config"));
     }
@@ -81,9 +84,6 @@ public class ConfigScreen extends Screen {
         ).dimensions(cx - 50, y, 100, 20).build());
     }
 
-    private ButtonWidget reachLabel;
-    private ButtonWidget hitsLabel;
-
     private void refresh() {
         if (reachLabel != null)
             reachLabel.setMessage(Text.literal("Reach: " + fmt(CrystalModule.reach)));
@@ -97,7 +97,7 @@ public class ConfigScreen extends Screen {
 
     @Override
     public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
-        this.renderBackground(ctx, mouseX, mouseY, delta);
+        // Note: do NOT call renderBackground manually — super.render() handles it
         super.render(ctx, mouseX, mouseY, delta);
         ctx.drawCenteredTextWithShadow(this.textRenderer,
                 "§dCrystal Macro §7v3", this.width / 2, 16, 0xFFFFFF);
