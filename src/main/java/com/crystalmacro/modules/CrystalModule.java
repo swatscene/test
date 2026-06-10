@@ -17,10 +17,12 @@ public class CrystalModule extends Module {
     public static int    hitsPerTick     = 5;
     public static int    placementWindow = 30;
     public static double matchRadius     = 1.2;
-    public static int    holdGraceTicks  = 10;  // after this many ticks of holding rclick, claim untagged crystals too
 
-    private int tickNum = 0;
-    private int holdTicks = 0;
+    private int tickNum   = 0;
+    private int rcActiveTicks = 0;       // how many ticks since last rclick activity
+    private int rcSeenRecently  = 0;     // sub-tick edge tracker
+    private boolean lastUse = false;
+
     private final Set<UUID> myCrystals   = new HashSet<>();
     private final Set<UUID> seenCrystals = new HashSet<>();
     private final List<PendingPlace> pending = new ArrayList<>();
@@ -36,7 +38,8 @@ public class CrystalModule extends Module {
         myCrystals.clear();
         pending.clear();
         seenCrystals.clear();
-        holdTicks = 0;
+        rcActiveTicks = 0;
+        rcSeenRecently = 0;
     }
 
     @Override
@@ -48,11 +51,15 @@ public class CrystalModule extends Module {
         boolean hasCrystal = client.player.getMainHandStack().isOf(Items.END_CRYSTAL)
                           || client.player.getOffHandStack().isOf(Items.END_CRYSTAL);
 
-        // Track how long use key has been held
-        if (useDown && hasCrystal) holdTicks++;
-        else holdTicks = 0;
+        // Detect rising edge AND held — both count as "active placing"
+        if (useDown || (lastUse != useDown)) {
+            rcSeenRecently = 5;   // remain "active" for 5 ticks after any click activity
+        }
+        lastUse = useDown;
+        if (rcSeenRecently > 0) rcSeenRecently--;
+        boolean activelyPlacing = (rcSeenRecently > 0) && hasCrystal;
 
-        // Record placement targets
+        // Record placement targets every tick we see use key + crystal + valid block
         if (useDown && hasCrystal && client.crosshairTarget instanceof BlockHitResult bhr
                 && bhr.getType() == HitResult.Type.BLOCK) {
             BlockPos bp = bhr.getBlockPos();
@@ -87,14 +94,14 @@ public class CrystalModule extends Module {
         seenCrystals.addAll(present);
         myCrystals.retainAll(present);
 
-        // ── FALLBACK: if user has been holding rclick for a while, claim any crystals
-        //              in reach that we don't have tagged. This catches crystals
-        //              the placement tracker missed.
-        if (holdTicks > holdGraceTicks) {
-            double reachSqFallback = reach * reach;
+        // FALLBACK — works for both holding AND spam-clicking:
+        // While the user has recently interacted with rclick and has crystals,
+        // claim any unrecognized crystals in reach as ours.
+        if (activelyPlacing) {
+            double reachSqFb = reach * reach;
             for (EndCrystalEntity c : allCrystals) {
                 if (myCrystals.contains(c.getUuid())) continue;
-                if (c.squaredDistanceTo(client.player) <= reachSqFallback) {
+                if (c.squaredDistanceTo(client.player) <= reachSqFb) {
                     myCrystals.add(c.getUuid());
                 }
             }
