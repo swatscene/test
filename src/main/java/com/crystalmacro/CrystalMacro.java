@@ -4,10 +4,10 @@ import com.crystalmacro.gui.ConfigScreen;
 import com.crystalmacro.modules.CrystalModule;
 import com.crystalmacro.modules.Module;
 import com.crystalmacro.modules.SprintModule;
+import com.crystalmacro.modules.TotemHitModule;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
-import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.option.KeyBinding;
 import net.minecraft.client.util.InputUtil;
 import net.minecraft.util.Identifier;
@@ -30,8 +30,9 @@ public class CrystalMacro implements ClientModInitializer {
         // Register modules
         MODULES.add(new CrystalModule());
         MODULES.add(new SprintModule());
+        MODULES.add(new TotemHitModule());
 
-        // GUI keybind (default: [ key)
+        // GUI keybind (default: [ )
         guiKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
                 "key.crystalmacro.gui",
                 InputUtil.Type.KEYSYM,
@@ -42,7 +43,7 @@ public class CrystalMacro implements ClientModInitializer {
         // Register all module keybinds
         for (Module m : MODULES) m.registerKeybind();
 
-        // Per-tick: run modules + check GUI key
+        // Per-tick: handle GUI key + run modules
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             while (guiKey.wasPressed()) {
                 client.setScreen(new ConfigScreen());
