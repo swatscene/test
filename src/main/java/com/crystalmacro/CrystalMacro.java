@@ -2,6 +2,7 @@ package com.crystalmacro;
 
 import com.crystalmacro.modules.CrystalModule;
 import com.crystalmacro.modules.Module;
+import com.crystalmacro.modules.TotemRestockModule;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.minecraft.client.option.KeyBinding;
@@ -20,6 +21,7 @@ public class CrystalMacro implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
         MODULES.add(new CrystalModule());
+        MODULES.add(new TotemRestockModule());
 
         for (Module m : MODULES) m.registerKeybind();
 
