@@ -12,11 +12,14 @@ import org.lwjgl.glfw.GLFW;
 
 /**
  * Triggerbot — attacks the crystal your crosshair is on.
- * Speed adjustable via /crystalspeed <1-50>  (1 = fastest, 50 = slowest)
+ *
+ * /crystalspeed <1-50>
+ *   1  = INSTANT (hits every tick + bursts up to 5 times per tick if crosshair stays on a crystal)
+ *   2  = every tick, single hit
+ *   3+ = wait N-2 extra ticks between hits (slower)
  */
 public class CrystalModule extends Module {
 
-    // speed value: 1..50 (1 = hit every tick, 50 = hit every 50 ticks ~ 2.5 sec)
     public static int speed = 1;
 
     private int cooldown = 0;
@@ -38,16 +41,20 @@ public class CrystalModule extends Module {
                         .executes(ctx -> {
                             int v = IntegerArgumentType.getInteger(ctx, "value");
                             speed = v;
+                            String label = v == 1 ? "INSTANT (burst mode)"
+                                          : v == 2 ? "fast"
+                                          : v == 50 ? "slowest"
+                                          : "tick delay";
                             ctx.getSource().sendFeedback(
                                 Text.literal("§7[CrystalMacro] §fSpeed set to §a" + v
-                                        + " §7(" + (v == 1 ? "fastest" : v == 50 ? "slowest" : "tick delay") + ")"));
+                                        + " §7(" + label + ")"));
                             return 1;
                         })
                     )
                     .executes(ctx -> {
                         ctx.getSource().sendFeedback(
-                            Text.literal("§7[CrystalMacro] §fCurrent speed: §a" + speed
-                                    + " §7| Use §f/crystalspeed <1-50>"));
+                            Text.literal("§7[CrystalMacro] §fSpeed: §a" + speed
+                                    + " §7| §f/crystalspeed <1-50> §7(1=instant)"));
                         return 1;
                     })
             );
@@ -62,12 +69,24 @@ public class CrystalModule extends Module {
         if (cooldown > 0) { cooldown--; return; }
         if (!client.options.useKey.isPressed()) return;
 
+        // Find what crystal we're aiming at
         HitResult hit = client.crosshairTarget;
         if (!(hit instanceof EntityHitResult ehr)) return;
         if (!(ehr.getEntity() instanceof EndCrystalEntity crystal)) return;
 
-        client.interactionManager.attackEntity(client.player, crystal);
-        client.player.swingHand(client.player.getActiveHand());
-        cooldown = speed - 1;   // speed=1 → no cooldown, speed=50 → wait 49 ticks
+        if (speed == 1) {
+            // INSTANT mode — burst up to 5 attacks in a single tick.
+            // The first one breaks the crystal; the rest hit whatever new crystal
+            // appears under the crosshair before the next tick.
+            for (int i = 0; i < 5; i++) {
+                client.interactionManager.attackEntity(client.player, crystal);
+                client.player.swingHand(client.player.getActiveHand());
+            }
+            cooldown = 0;
+        } else {
+            client.interactionManager.attackEntity(client.player, crystal);
+            client.player.swingHand(client.player.getActiveHand());
+            cooldown = speed - 2;   // 2=no wait, 3=1 tick wait, ..., 50=48 ticks
+        }
     }
 }
