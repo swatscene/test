@@ -1,26 +1,57 @@
 package com.crystalmacro.modules;
 
+import com.mojang.brigadier.arguments.IntegerArgumentType;
+import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
+import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.entity.decoration.EndCrystalEntity;
+import net.minecraft.text.Text;
 import net.minecraft.util.hit.EntityHitResult;
 import net.minecraft.util.hit.HitResult;
 import org.lwjgl.glfw.GLFW;
 
 /**
  * Triggerbot — attacks the crystal your crosshair is on.
- * Only fires while you're holding right-click (so it only breaks crystals
- * you're actively placing, not random ones you happen to look at).
+ * Speed adjustable via /crystalspeed <1-50>  (1 = fastest, 50 = slowest)
  */
 public class CrystalModule extends Module {
 
-    // How many ticks to wait after a hit before hitting again on the same target.
-    // 0 = every tick (fastest), 1-2 = slightly more human-like
-    public static int cooldownTicks = 0;
+    // speed value: 1..50 (1 = hit every tick, 50 = hit every 50 ticks ~ 2.5 sec)
+    public static int speed = 1;
 
     private int cooldown = 0;
+    private boolean commandRegistered = false;
 
     public CrystalModule() {
         super("CrystalMacro", "key.crystalmacro.toggle", GLFW.GLFW_KEY_R);
+        registerCommand();
+    }
+
+    private void registerCommand() {
+        if (commandRegistered) return;
+        commandRegistered = true;
+
+        ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> {
+            dispatcher.register(
+                ClientCommandManager.literal("crystalspeed")
+                    .then(ClientCommandManager.argument("value", IntegerArgumentType.integer(1, 50))
+                        .executes(ctx -> {
+                            int v = IntegerArgumentType.getInteger(ctx, "value");
+                            speed = v;
+                            ctx.getSource().sendFeedback(
+                                Text.literal("§7[CrystalMacro] §fSpeed set to §a" + v
+                                        + " §7(" + (v == 1 ? "fastest" : v == 50 ? "slowest" : "tick delay") + ")"));
+                            return 1;
+                        })
+                    )
+                    .executes(ctx -> {
+                        ctx.getSource().sendFeedback(
+                            Text.literal("§7[CrystalMacro] §fCurrent speed: §a" + speed
+                                    + " §7| Use §f/crystalspeed <1-50>"));
+                        return 1;
+                    })
+            );
+        });
     }
 
     @Override
@@ -29,17 +60,14 @@ public class CrystalModule extends Module {
         if (client.interactionManager == null) return;
 
         if (cooldown > 0) { cooldown--; return; }
-
-        // Only fire while user is holding right-click (placing crystals)
         if (!client.options.useKey.isPressed()) return;
 
         HitResult hit = client.crosshairTarget;
         if (!(hit instanceof EntityHitResult ehr)) return;
         if (!(ehr.getEntity() instanceof EndCrystalEntity crystal)) return;
 
-        // Attack it
         client.interactionManager.attackEntity(client.player, crystal);
         client.player.swingHand(client.player.getActiveHand());
-        cooldown = cooldownTicks;
+        cooldown = speed - 1;   // speed=1 → no cooldown, speed=50 → wait 49 ticks
     }
 }
